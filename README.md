@@ -76,4 +76,8 @@ docker compose -p fcg-wave3-clean up --build -d
 COMPOSE_PROJECT_NAME=fcg-wave3-clean python3 scripts/validate-wave2.py
 ```
 
-The successful run on 2026-11-02 returned one welcome notification, one approved purchase confirmation and library item, no library item or approval confirmation for the rejected purchase, and zero remaining pending records for both purchases. See `sdd/phases/phase-2/wave-2-implementation-evidence.md` in the parent workspace for the result and limits.
+The successful run on 2026-11-02 returned one welcome notification, one approved purchase confirmation and library item, no library item or approval confirmation for the rejected purchase, and zero remaining pending records for both purchases.
+
+## Clean-checkout verification
+
+On 2026-11-02, the five public repositories were cloned as siblings into a new directory, with clean Git status at Orchestration `514f8ef`, UsersAPI `b484154`, CatalogAPI `eca7805`, PaymentsAPI `ebd57fb`, and NotificationsAPI `5f3c62b`. An isolated `fcg-wave3-clean` Compose project created new SQLite volumes. `docker compose -p fcg-wave3-clean config --quiet` and `docker compose -p fcg-wave3-clean up --build -d` passed: all four service images built from their own source and the four APIs plus RabbitMQ started. `COMPOSE_PROJECT_NAME=fcg-wave3-clean python3 scripts/validate-wave2.py` then passed registration, approved purchase, and rejected purchase checks; all four health endpoints returned `200`.
