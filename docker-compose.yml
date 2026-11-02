@@ -1,0 +1,92 @@
+name: fcg-phase2
+
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  usersapi:
+    build:
+      context: ../UsersAPI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Jwt__Issuer: ${JWT_ISSUER:-fcg-local}
+      Jwt__Audience: ${JWT_AUDIENCE:-fcg-services}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      BootstrapAdmin__Email: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      BootstrapAdmin__Password: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    ports:
+      - "8081:8080"
+    volumes:
+      - users-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  catalogapi:
+    build:
+      context: ../CatalogAPI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Jwt__Issuer: ${JWT_ISSUER:-fcg-local}
+      Jwt__Audience: ${JWT_AUDIENCE:-fcg-services}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      UsersApi__BaseUrl: http://usersapi:8080/
+    ports:
+      - "8082:8080"
+    volumes:
+      - catalog-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      usersapi:
+        condition: service_started
+
+  paymentsapi:
+    build:
+      context: ../PaymentsAPI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      PaymentSimulation__Outcome: ${PAYMENT_OUTCOME:-Approved}
+    ports:
+      - "8083:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  notificationsapi:
+    build:
+      context: ../NotificationsAPI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "8084:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  users-data:
+  catalog-data:
