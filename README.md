@@ -8,7 +8,7 @@ Place this repository beside `UsersAPI`, `CatalogAPI`, `PaymentsAPI`, and `Notif
 - Local ports 5672, 15672, and 8081-8084 available.
 - A copy of each of the five sibling repositories.
 
-Copy `.env.example` to `.env`. Fill `JWT_SIGNING_KEY` with at least 32 random bytes encoded as text, and set nonempty `RABBITMQ_PASSWORD`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. Keep `.env` private; it is ignored by Git. `JWT_ISSUER`, `JWT_AUDIENCE`, `RABBITMQ_USER`, and `PAYMENT_OUTCOME` have documented local defaults. `PAYMENT_OUTCOME` must be `Approved` or `Rejected`.
+Copy `.env.example` to `.env`. Fill `JWT_SIGNING_KEY` with at least 32 random bytes encoded as text, and set nonempty `RABBITMQ_PASSWORD`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. Keep `.env` private; it is ignored by Git. `JWT_ISSUER`, `JWT_AUDIENCE`, `RABBITMQ_USER`, and `PAYMENT_OUTCOME` have documented local defaults. `PAYMENT_OUTCOME` must be `Approved` or `Rejected`. `IMAGE_NAMESPACE=fcg-local` and `IMAGE_TAG=local` name images built on the local machine.
 
 For example, PowerShell can create a signing value without displaying it:
 
@@ -29,6 +29,21 @@ docker compose logs -f notificationsapi
 ```
 
 Health endpoints are `http://localhost:8081/health` (users), `:8082/health` (catalog), `:8083/health` (payments), and `:8084/health` (notifications). RabbitMQ's management UI is at `http://localhost:15672`; use the credentials in the private `.env` file.
+
+## Docker Hub Personal preparation
+
+The free Docker Personal plan permits four public image repositories for this challenge. Use one public Docker Hub repository per service: `fcg-users-api`, `fcg-catalog-api`, `fcg-payments-api`, and `fcg-notifications-api` under the team's Docker Hub namespace. The four source repositories each contain `.github/workflows/docker-hub.yml`. On a pull request the workflow runs .NET tests and validates the image build without publishing. On `main`, it runs the tests, then publishes the public image with `main` and `sha-<full Git commit SHA>` tags once credentials are configured.
+
+For each GitHub source repository, set the repository variable `DOCKERHUB_USERNAME` to the Docker Hub namespace and the encrypted secret `DOCKERHUB_TOKEN` to a Docker Hub access token with image push permission. Do not put the token in `.env`, Git, or a workflow file. These local Git repositories do not yet have remote GitHub URLs; the workflows cannot run until the repositories are pushed and those settings exist.
+
+To run with published images after they exist, set `IMAGE_NAMESPACE` in the private `.env` to the Docker Hub namespace and `IMAGE_TAG=main`, then run from this directory:
+
+```powershell
+docker compose pull usersapi catalogapi paymentsapi notificationsapi
+docker compose up --no-build -d
+```
+
+Use a `sha-...` tag for a fixed revision. Since the four services have independent Git commits, fixed-revision deployment can set individual image tags in a later Kubernetes manifest or Compose override. The local `docker compose up --build -d` path remains available for source-checkout validation.
 
 ## Registration and purchase scenarios
 
