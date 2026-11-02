@@ -8,6 +8,16 @@ Place this repository beside `UsersAPI`, `CatalogAPI`, `PaymentsAPI`, and `Notif
 - Local ports 5672, 15672, and 8081-8084 available.
 - A copy of each of the five sibling repositories.
 
+From an empty parent directory, obtain the documented sibling layout with:
+
+```powershell
+git clone https://github.com/viniciuscs84/fiap-postech-f2-fcg-orchestration.git Orchestration
+git clone https://github.com/viniciuscs84/fiap-postech-f2-fcg-users-api.git UsersAPI
+git clone https://github.com/viniciuscs84/fiap-postech-f2-fcg-catalog-api.git CatalogAPI
+git clone https://github.com/viniciuscs84/fiap-postech-f2-fcg-payments-api.git PaymentsAPI
+git clone https://github.com/viniciuscs84/fiap-postech-f2-fcg-notifications-api.git NotificationsAPI
+```
+
 Copy `.env.example` to `.env`. Fill `JWT_SIGNING_KEY` with at least 32 random bytes encoded as text, and set nonempty `RABBITMQ_PASSWORD`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`. Keep `.env` private; it is ignored by Git. `JWT_ISSUER`, `JWT_AUDIENCE`, `RABBITMQ_USER`, and `PAYMENT_OUTCOME` have documented local defaults. `PAYMENT_OUTCOME` must be `Approved` or `Rejected`. `IMAGE_NAMESPACE=fcg-local` and `IMAGE_TAG=local` name images built on the local machine.
 
 For example, PowerShell can create a signing value without displaying it:
@@ -57,6 +67,13 @@ The automated broker check runs both registration and purchase outcomes against 
 
 ```bash
 python3 scripts/validate-wave2.py
+```
+
+To isolate a fresh run from existing Compose volumes, pass the same project name to startup and validation:
+
+```bash
+docker compose -p fcg-wave3-clean up --build -d
+COMPOSE_PROJECT_NAME=fcg-wave3-clean python3 scripts/validate-wave2.py
 ```
 
 The successful run on 2026-11-02 returned one welcome notification, one approved purchase confirmation and library item, no library item or approval confirmation for the rejected purchase, and zero remaining pending records for both purchases. See `sdd/phases/phase-2/wave-2-implementation-evidence.md` in the parent workspace for the result and limits.

@@ -14,7 +14,9 @@ from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPOSE = ["docker", "compose", "-f", str(ROOT / "docker-compose.yml"), "--env-file", str(ROOT / ".env")]
+PROJECT_NAME = os.environ.get("COMPOSE_PROJECT_NAME", "fcg-phase2")
+COMPOSE = ["docker", "compose", "-p", PROJECT_NAME, "-f", str(ROOT / "docker-compose.yml"),
+           "--env-file", str(ROOT / ".env")]
 BASE_USERS = "http://127.0.0.1:8081"
 BASE_CATALOG = "http://127.0.0.1:8082"
 
@@ -91,7 +93,7 @@ def create_game(token: str, title: str) -> str:
 
 
 def pending_count(user_id: str, game_id: str) -> int:
-    result = subprocess.run(["docker", "volume", "inspect", "fcg-phase2_catalog-data", "--format", "{{.Mountpoint}}"],
+    result = subprocess.run(["docker", "volume", "inspect", f"{PROJECT_NAME}_catalog-data", "--format", "{{.Mountpoint}}"],
                             text=True, capture_output=True, check=True)
     database = Path(result.stdout.strip()) / "catalog.db"
     with sqlite3.connect(database) as connection:
@@ -103,7 +105,7 @@ def pending_count(user_id: str, game_id: str) -> int:
 
 def notification_queue_drained() -> bool:
     result = subprocess.run(
-        ["docker", "exec", "fcg-phase2-rabbitmq-1", "rabbitmqctl", "list_queues",
+        ["docker", "exec", f"{PROJECT_NAME}-rabbitmq-1", "rabbitmqctl", "list_queues",
          "name", "messages_ready", "messages_unacknowledged", "--formatter", "json"],
         text=True, capture_output=True, check=True,
     )
