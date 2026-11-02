@@ -1,6 +1,6 @@
 # FCG Phase 2 local orchestration
 
-Place this repository beside `UsersAPI`, `CatalogAPI`, `PaymentsAPI`, and `NotificationsAPI` inside `Fase 2/`. The Compose file builds each service from its own repository and starts RabbitMQ with four application containers. This is a prepared local environment; image and end-to-end validation require Docker Compose.
+Place this repository beside `UsersAPI`, `CatalogAPI`, `PaymentsAPI`, and `NotificationsAPI` inside `Fase 2/`. The Compose file builds each service from its own repository and starts RabbitMQ with four application containers. The published images and event flows were validated with Docker Compose on 2026-11-02.
 
 ## Prerequisites and configuration
 
@@ -53,4 +53,10 @@ Use a `sha-...` tag for a fixed revision. Since the four services have independe
 4. To demonstrate rejection, set `PAYMENT_OUTCOME=Rejected` in `.env` and run `docker compose up -d --force-recreate paymentsapi`. Create another game and initiate its purchase as the same user. The new game must remain absent from `/api/library/me`, and no approved-purchase confirmation should be logged for that game.
 5. To verify the preserved Phase 1 administrator operation, send `POST http://localhost:8082/api/admin/users/{userId}/games/{gameId}` with an administrator JWT. CatalogAPI checks the target account through UsersAPI. A regular-user JWT must receive `403`; an unknown user must receive `404`.
 
-The two event flows and image builds have not yet been run in this environment because Docker and RabbitMQ are unavailable. Capture actual output and gate results after a runtime is available.
+The automated broker check runs both registration and purchase outcomes against the running Compose stack. It creates unique test users and games, checks the simulated notification logs and library state, and temporarily recreates `paymentsapi` with each configured outcome before restoring the `.env` setting. It requires Python 3 and access to the Docker Engine and the catalog data volume from the same host context. With Docker Engine inside Ubuntu WSL, run it there:
+
+```bash
+python3 scripts/validate-wave2.py
+```
+
+The successful run on 2026-11-02 returned one welcome notification, one approved purchase confirmation and library item, no library item or approval confirmation for the rejected purchase, and zero remaining pending records for both purchases. See `sdd/phases/phase-2/wave-2-implementation-evidence.md` in the parent workspace for the result and limits.
