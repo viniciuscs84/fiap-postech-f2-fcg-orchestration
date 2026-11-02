@@ -32,11 +32,11 @@ Health endpoints are `http://localhost:8081/health` (users), `:8082/health` (cat
 
 ## Docker Hub Personal preparation
 
-The free Docker Personal plan permits four public image repositories for this challenge. Use one public Docker Hub repository per service: `fcg-users-api`, `fcg-catalog-api`, `fcg-payments-api`, and `fcg-notifications-api` under the team's Docker Hub namespace. The four source repositories each contain `.github/workflows/docker-hub.yml`. On a pull request the workflow runs .NET tests and validates the image build without publishing. On `main`, it runs the tests, then publishes the public image with `main` and `sha-<full Git commit SHA>` tags once credentials are configured.
+The free Docker Personal plan permits four public image repositories for this challenge. Use the `viniciuscs84` Docker Hub namespace with one public repository per service: `viniciuscs84/fcg-users-api`, `viniciuscs84/fcg-catalog-api`, `viniciuscs84/fcg-payments-api`, and `viniciuscs84/fcg-notifications-api`. The four source repositories each contain `.github/workflows/docker-hub.yml`. On a pull request the workflow runs .NET tests and validates the image build without publishing. On `main`, it runs the tests, then publishes the public image with `main` and `sha-<full Git commit SHA>` tags once credentials are configured.
 
-For each GitHub source repository, set the repository variable `DOCKERHUB_USERNAME` to the Docker Hub namespace and the encrypted secret `DOCKERHUB_TOKEN` to a Docker Hub access token with image push permission. Do not put the token in `.env`, Git, or a workflow file. These local Git repositories do not yet have remote GitHub URLs; the workflows cannot run until the repositories are pushed and those settings exist.
+For each GitHub source repository, set the repository variable `DOCKERHUB_USERNAME` to `viniciuscs84` and the encrypted secret `DOCKERHUB_TOKEN` to a Docker Hub access token with image push permission. Do not put the token in `.env`, Git, or a workflow file. These local Git repositories do not yet have remote GitHub URLs; the workflows cannot run until the repositories are pushed and those settings exist.
 
-To run with published images after they exist, set `IMAGE_NAMESPACE` in the private `.env` to the Docker Hub namespace and `IMAGE_TAG=main`, then run from this directory:
+To run with published images after they exist, set `IMAGE_NAMESPACE=viniciuscs84` and `IMAGE_TAG=main` in the private `.env`, then run from this directory:
 
 ```powershell
 docker compose pull usersapi catalogapi paymentsapi notificationsapi
