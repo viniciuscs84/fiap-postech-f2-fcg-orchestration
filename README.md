@@ -81,3 +81,34 @@ The successful run on 2026-11-02 returned one welcome notification, one approved
 ## Clean-checkout verification
 
 On 2026-11-02, the five public repositories were cloned as siblings into a new directory, with clean Git status at Orchestration `514f8ef`, UsersAPI `b484154`, CatalogAPI `eca7805`, PaymentsAPI `ebd57fb`, and NotificationsAPI `5f3c62b`. An isolated `fcg-wave3-clean` Compose project created new SQLite volumes. `docker compose -p fcg-wave3-clean config --quiet` and `docker compose -p fcg-wave3-clean up --build -d` passed: all four service images built from their own source and the four APIs plus RabbitMQ started. `COMPOSE_PROJECT_NAME=fcg-wave3-clean python3 scripts/validate-wave2.py` then passed registration, approved purchase, and rejected purchase checks; all four health endpoints returned `200`.
+
+## Local Kubernetes deployment with Kind
+
+Use the same five-repository sibling layout and private `.env` described above. Install [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/) and [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) on the machine that runs Docker Engine; the validated Ubuntu WSL environment used Kind v0.33.0 and kubectl v1.37.2. Run Kind, kubectl, and the Python scripts as the same Linux user. The service manifests pin the four public images to their published full-commit `sha-...` tags and RabbitMQ to a digest, with `IfNotPresent` pull policy. If those images are already local and Docker Hub is unavailable, load them with `kind load docker-image --name fcg-phase2 <image:tag>` before applying the workloads.
+
+From the `Orchestration` directory, create the cluster and provision the namespace and Secret. The script reads only the required sensitive values from the ignored `.env`; it sends the Secret to Kubernetes through standard input using server-side apply and does not print the values. Do not commit `.env` or a generated Secret manifest.
+
+```bash
+kind create cluster --name fcg-phase2 --wait 180s
+kubectl --context kind-fcg-phase2 apply -f k8s/00-namespace.yaml
+python3 scripts/apply-kind-secrets.py
+```
+
+Apply the shared ConfigMap and RabbitMQ from this repository, then the Deployment, Service, and optional PVC resources owned by each service repository:
+
+```bash
+kubectl --context kind-fcg-phase2 apply -f k8s/
+kubectl --context kind-fcg-phase2 apply -f ../UsersAPI/k8s/
+kubectl --context kind-fcg-phase2 apply -f ../CatalogAPI/k8s/
+kubectl --context kind-fcg-phase2 apply -f ../PaymentsAPI/k8s/
+kubectl --context kind-fcg-phase2 apply -f ../NotificationsAPI/k8s/
+kubectl --context kind-fcg-phase2 -n fcg-phase2 wait --for=condition=available deployment --all --timeout=180s
+kubectl --context kind-fcg-phase2 -n fcg-phase2 get pods
+python3 scripts/validate-kind.py
+```
+
+The shared ConfigMap sets the local JWT issuer and audience, RabbitMQ Service name, UsersAPI Service URL, and default `Approved` simulation outcome. Change its non-sensitive values before application if needed. The Secret supplies the JWT signing key, broker credentials, and local administrator credentials. UsersAPI and CatalogAPI use separate 1 Gi persistent volume claims backed by Kind's default storage class. Each API repository keeps its authoritative root `/k8s/all.yaml`; this orchestration repository holds only the namespace, shared configuration, broker, scripts, and application order.
+
+The Kind validator opens temporary port-forwards for the four API Services, checks all four health endpoints, and exercises registration, approved purchase, and rejected purchase. It temporarily overrides `PaymentSimulation__Outcome` on the PaymentsAPI Deployment and restores the ConfigMap default before exit. The local cluster validation on 2026-11-02 had five available Deployments and five `Running` Pods with zero restarts after the broker probe correction; the validator passed all three flows. The Kubernetes Services remain internal to the cluster. For manual inspection, use `kubectl --context kind-fcg-phase2 -n fcg-phase2 port-forward service/usersapi 8081:8080` and corresponding service/port pairs for the other APIs.
+
+When Docker Engine runs inside WSL and the distribution shuts down, the Kind node container may stop and its host API port can change. Resume that existing local cluster with `docker start fcg-phase2-control-plane`, then `kind export kubeconfig --name fcg-phase2` before using kubectl again. The four service images are fixed to their published full-commit tags and RabbitMQ to a digest; the validated pinned rollout and Kind flow check passed again on 2026-11-03.
